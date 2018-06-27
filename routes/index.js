@@ -1,6 +1,7 @@
 const express = require('express');
 
 const Book = require("../models/book-model.js");
+const Author = require("../models/author-model.js");
 
 const router  = express.Router();
 
@@ -11,6 +12,7 @@ router.get('/', (req, res, next) => {
 
 router.get("/books", (req, res, next) => {
   Book.find()
+    .populate("author")
     .then((bookResults) => {
       // send the database results to the view as "bookArray"
       res.locals.bookArray = bookResults;
@@ -30,6 +32,7 @@ router.get("/read", (req, res, next) => {
 
   // Book.findOne({ _id: b })
   Book.findById(b)
+    .populate("author")
     .then((bookDoc) => {
       res.locals.bookItem = bookDoc;
       res.render("book-details.hbs");
@@ -70,6 +73,7 @@ router.get("/book/:bookId", (req, res, next) => {
 
   // Book.findOne({ _id: bookId })
   Book.findById(bookId)
+    .populate("author")
     .then((bookDoc) => {
       res.locals.bookItem = bookDoc;
       res.render("book-details.hbs");
@@ -136,6 +140,36 @@ router.get("/book/:bookId/delete", (req, res, next) => {
       // show our error page
       next(err);
     });
+});
+
+router.get("/author/:authorId", (req, res, next) => {
+  const { authorId } = req.params;
+
+  Author.findById(authorId)
+    .then((authorDoc) => {
+      res.locals.authorItem = authorDoc;
+      res.render("author-details.hbs");
+    })
+    .catch((err) => {
+      next(err);
+    })
+});
+
+router.post("/book/:bookId/process-review", (req, res, next) => {
+  const { bookId } = req.params;
+  const { user, comments } = req.body;
+
+  Book.findByIdAndUpdate(
+    bookId,
+    { $push: { reviews: { user, comments } } },
+    { runValidators: true }
+  )
+  .then((bookDoc) => {
+    res.redirect(`/book/${bookId}`)
+  })
+  .catch((err) => {
+    next(err);
+  });
 });
 
 module.exports = router;
